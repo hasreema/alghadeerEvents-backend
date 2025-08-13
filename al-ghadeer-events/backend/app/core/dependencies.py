@@ -1,5 +1,5 @@
 from typing import Optional, List
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -36,3 +36,21 @@ def require_roles(roles: List[str]):
         return user
 
     return role_checker
+
+
+class Pagination:
+    def __init__(
+        self,
+        page: int = Query(1, ge=1, description="Page number (starting at 1)"),
+        page_size: int = Query(20, ge=1, le=200, description="Items per page"),
+    ):
+        self.page = page
+        self.page_size = page_size
+
+    @property
+    def offset(self) -> int:
+        return (self.page - 1) * self.page_size
+
+    @property
+    def limit(self) -> int:
+        return self.page_size

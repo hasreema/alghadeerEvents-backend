@@ -16,6 +16,8 @@ from app.api.events import router as events_router
 from app.api.tasks import router as tasks_router
 from app.api.auth import router as auth_router
 from app.api.payments import router as payments_router
+from app.api.employees import router as employees_router
+from app.api.expenses import router as expenses_router
 from app.models.user import User
 
 # Configure logging
@@ -105,6 +107,8 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
 app.include_router(payments_router, prefix="/api")
+app.include_router(employees_router, prefix="/api")
+app.include_router(expenses_router, prefix="/api")
 
 
 # Exception handlers

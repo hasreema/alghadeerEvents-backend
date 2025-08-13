@@ -2,6 +2,8 @@
 
 This backend provides Events and Tasks CRUD with optional linkage of tasks to events, plus JWT authentication and RBAC foundation. It exposes OpenAPI docs, uses PostgreSQL via SQLAlchemy, and ships with Alembic migrations and Docker Compose.
 
+Note: Use Docker for running locally to avoid host Python version/package compatibility issues.
+
 ## Quick start (Docker)
 
 1. Copy the example env file and adjust if needed:
@@ -24,7 +26,7 @@ docker compose up -d --build
 ## Configuration
 
 - `backend/app/core/config.py` reads environment variables from `backend/.env`:
-  - `DATABASE_URL` (default: `postgresql+psycopg2://postgres:postgres@db:5432/alghadeer`)
+  - `DATABASE_URL` (default: `postgresql+psycopg://postgres:postgres@db:5432/alghadeer`)
   - `FRONTEND_URL` and `CORS_ORIGINS` for CORS
   - `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRES_MINUTES`
   - `ADMIN_EMAIL`, `ADMIN_PASSWORD` for seeding admin on startup
@@ -33,7 +35,7 @@ docker compose up -d --build
 ## Alembic migrations
 
 - Migrations are applied automatically on container start (`backend/start.sh`).
-- To run manually (with Python env activated):
+- To run manually:
 
 ```bash
 cd backend
@@ -50,19 +52,42 @@ Use the returned bearer token to access protected endpoints.
 
 ## Endpoints
 
-- `POST /api/events` – Create event (auth required)
-- `GET /api/events` – List events (auth required)
-- `GET /api/events/{id}` – Get event (auth required)
-- `PUT /api/events/{id}` – Update event (auth required)
-- `DELETE /api/events/{id}` – Delete event (auth required)
+- Events (auth required)
+  - `POST /api/events`
+  - `GET /api/events`
+  - `GET /api/events/{id}`
+  - `PUT /api/events/{id}`
+  - `DELETE /api/events/{id}`
 
-- `POST /api/tasks` – Create task (auth required)
-- `GET /api/tasks` – List tasks (auth required; optional `?event_id=`)
-- `GET /api/tasks/{id}` – Get task (auth required)
-- `PUT /api/tasks/{id}` – Update task (auth required)
-- `DELETE /api/tasks/{id}` – Delete task (auth required)
+- Tasks (auth required)
+  - `POST /api/tasks`
+  - `GET /api/tasks[?event_id=]`
+  - `GET /api/tasks/{id}`
+  - `PUT /api/tasks/{id}`
+  - `DELETE /api/tasks/{id}`
+
+- Payments (auth required)
+  - `POST /api/payments`
+  - `GET /api/payments`
+  - `GET /api/payments/{id}`
+  - `PUT /api/payments/{id}`
+  - `DELETE /api/payments/{id}`
+
+- Expenses (auth required)
+  - `POST /api/expenses`
+  - `GET /api/expenses`
+  - `GET /api/expenses/{id}`
+  - `PUT /api/expenses/{id}`
+  - `DELETE /api/expenses/{id}`
+
+- Employees (auth required; admin to create/update/delete)
+  - `POST /api/employees`
+  - `GET /api/employees`
+  - `GET /api/employees/{id}`
+  - `PUT /api/employees/{id}`
+  - `DELETE /api/employees/{id}`
 
 ## Notes
 
-- Extend models/routers to cover more modules (payments, employees, expenses, reminders, reports) next.
+- Extend models/routers to cover richer business logic (profitability, status workflows, contacts) next.
 - Multi-language, Google Sheets, WhatsApp, and PDF reporting will follow in later phases.

@@ -33,6 +33,38 @@ class TokenOut(BaseModel):
 
 
 # ----------------------
+# Employee Schemas
+# ----------------------
+class EmployeeBase(BaseModel):
+    full_name: str
+    role: Optional[str] = None
+    hourly_wage: Optional[float] = None
+    phone: Optional[str] = None
+    is_active: Optional[bool] = True
+
+
+class EmployeeCreate(EmployeeBase):
+    pass
+
+
+class EmployeeUpdate(BaseModel):
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+    hourly_wage: Optional[float] = None
+    phone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class EmployeeOut(EmployeeBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+# ----------------------
 # Event Schemas
 # ----------------------
 class EventBase(BaseModel):
@@ -136,6 +168,40 @@ class PaymentUpdate(BaseModel):
 
 
 class PaymentOut(PaymentBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[int] = None
+    updated_by: Optional[int] = None
+
+    class Config:
+        orm_mode = True
+
+
+# ----------------------
+# Expense Schemas
+# ----------------------
+class ExpenseBase(BaseModel):
+    event_id: Optional[int] = None
+    amount: float
+    category: Optional[str] = None
+    description: Optional[str] = None
+    expense_date: date
+
+
+class ExpenseCreate(ExpenseBase):
+    pass
+
+
+class ExpenseUpdate(BaseModel):
+    event_id: Optional[int] = None
+    amount: Optional[float] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    expense_date: Optional[date] = None
+
+
+class ExpenseOut(ExpenseBase):
     id: int
     created_at: datetime
     updated_at: datetime
