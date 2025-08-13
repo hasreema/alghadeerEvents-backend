@@ -20,6 +20,7 @@ from app.api.employees import router as employees_router
 from app.api.expenses import router as expenses_router
 from app.api.reports import router as reports_router
 from app.api.integrations import router as integrations_router
+from app.api.analytics import router as analytics_router
 from app.models.user import User
 
 # Configure logging
@@ -113,6 +114,7 @@ app.include_router(employees_router, prefix="/api")
 app.include_router(expenses_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
 app.include_router(integrations_router, prefix="/api")
+app.include_router(analytics_router, prefix="/api")
 
 
 # Exception handlers

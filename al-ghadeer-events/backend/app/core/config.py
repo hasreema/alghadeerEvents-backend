@@ -59,8 +59,11 @@ class Settings(BaseSettings):
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
 
-    # Reporting
+    # Reporting / i18n
     hebrew_font_path: Optional[str] = None
+    arabic_font_path: Optional[str] = None
+    supported_languages: List[str] = ["en", "he", "ar"]
+    default_language: str = "en"
 
     class Config:
         env_file = ".env"

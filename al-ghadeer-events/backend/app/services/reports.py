@@ -12,6 +12,7 @@ from openpyxl.utils import get_column_letter
 
 from app.core.config import settings
 from app.models.event import Event
+from app.services.i18n import t
 
 
 def _register_hebrew_font():
@@ -24,7 +25,7 @@ def _register_hebrew_font():
     return 'Helvetica'
 
 
-def generate_monthly_pdf(events: List[Event], month_label: str) -> bytes:
+def generate_monthly_pdf(events: List[Event], month_label: str, lang: Optional[str] = None) -> bytes:
     buffer = BytesIO()
     font_name = _register_hebrew_font()
 
@@ -32,7 +33,7 @@ def generate_monthly_pdf(events: List[Event], month_label: str) -> bytes:
     width, height = A4
 
     p.setFont(font_name, 16)
-    p.drawString(40, height - 50, f"דוח חודשי - {month_label}")
+    p.drawString(40, height - 50, f"{t('monthly_report', lang)} - {month_label}")
 
     p.setFont(font_name, 10)
     y = height - 90
@@ -53,7 +54,7 @@ def generate_monthly_pdf(events: List[Event], month_label: str) -> bytes:
         totals['labor'] += labor
         totals['profit'] += profit
 
-        line = f"{e.date} | {e.title} | הכנסות {revenue} | הוצאות {expenses} | עבודה {labor} | רווח {profit}"
+        line = f"{e.date} | {e.title} | {t('total_revenue', lang)} {revenue} | {t('total_expenses', lang)} {expenses} | {t('total_labor', lang)} {labor} | {t('total_profit', lang)} {profit}"
         p.drawString(40, y, line)
         y -= 18
         if y < 60:
@@ -62,10 +63,10 @@ def generate_monthly_pdf(events: List[Event], month_label: str) -> bytes:
             y = height - 60
 
     p.setFont(font_name, 12)
-    p.drawString(40, y - 10, f"סה""כ הכנסות: {totals['revenue']}")
-    p.drawString(40, y - 28, f"סה""כ הוצאות: {totals['expenses']}")
-    p.drawString(40, y - 46, f"סה""כ עבודה: {totals['labor']}")
-    p.drawString(40, y - 64, f"סה""כ רווח: {totals['profit']}")
+    p.drawString(40, y - 10, f"{t('total_revenue', lang)}: {totals['revenue']}")
+    p.drawString(40, y - 28, f"{t('total_expenses', lang)}: {totals['expenses']}")
+    p.drawString(40, y - 46, f"{t('total_labor', lang)}: {totals['labor']}")
+    p.drawString(40, y - 64, f"{t('total_profit', lang)}: {totals['profit']}")
 
     p.showPage()
     p.save()
