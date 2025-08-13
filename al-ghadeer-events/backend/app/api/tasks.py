@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_roles, Pagination
 from app.models.task import Task
 from app.models.event import Event
 from app.models.user import User
@@ -30,12 +30,28 @@ def create_task(payload: TaskCreate, db: Session = Depends(get_db), current_user
 def list_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    pagination: Pagination = Depends(),
     event_id: Optional[int] = Query(None, description="Filter by event_id"),
+    status_filter: Optional[str] = Query(None, alias="status"),
+    priority: Optional[str] = Query(None),
+    assigned_to: Optional[str] = Query(None),
 ):
     query = db.query(Task)
     if event_id is not None:
         query = query.filter(Task.event_id == event_id)
-    return query.order_by(Task.due_date.asc().nulls_last()).all()
+    if status_filter:
+        query = query.filter(Task.status == status_filter)
+    if priority:
+        query = query.filter(Task.priority == priority)
+    if assigned_to:
+        query = query.filter(Task.assigned_to == assigned_to)
+
+    return (
+        query.order_by(Task.due_date.asc().nulls_last())
+        .offset(pagination.offset)
+        .limit(pagination.limit)
+        .all()
+    )
 
 
 @router.get("/{task_id}", response_model=TaskOut)
@@ -69,7 +85,7 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
     return task
 
 
-@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_roles(["admin"]))])
 def delete_task(task_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:

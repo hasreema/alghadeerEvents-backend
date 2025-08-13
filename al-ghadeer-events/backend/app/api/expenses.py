@@ -1,9 +1,10 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_roles, Pagination
 from app.models.expense import Expense
 from app.models.event import Event
 from app.models.user import User
@@ -27,8 +28,31 @@ def create_expense(payload: ExpenseCreate, db: Session = Depends(get_db), curren
 
 
 @router.get("/", response_model=List[ExpenseOut])
-def list_expenses(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(Expense).order_by(Expense.expense_date.desc()).all()
+def list_expenses(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    pagination: Pagination = Depends(),
+    event_id: Optional[int] = Query(None),
+    category: Optional[str] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+):
+    query = db.query(Expense)
+    if event_id is not None:
+        query = query.filter(Expense.event_id == event_id)
+    if category:
+        query = query.filter(Expense.category == category)
+    if start_date:
+        query = query.filter(Expense.expense_date >= start_date)
+    if end_date:
+        query = query.filter(Expense.expense_date <= end_date)
+
+    return (
+        query.order_by(Expense.expense_date.desc())
+        .offset(pagination.offset)
+        .limit(pagination.limit)
+        .all()
+    )
 
 
 @router.get("/{expense_id}", response_model=ExpenseOut)
@@ -61,7 +85,7 @@ def update_expense(expense_id: int, payload: ExpenseUpdate, db: Session = Depend
     return expense
 
 
-@router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_roles(["admin"]))])
 def delete_expense(expense_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not expense:

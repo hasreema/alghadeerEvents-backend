@@ -9,6 +9,8 @@ class Event(Base):
     __tablename__ = "events"
     __table_args__ = (
         Index("ix_events_date_status", "date", "status"),
+        Index("ix_events_title", "title"),
+        Index("ix_events_location", "location"),
     )
 
     id = Column(Integer, primary_key=True, index=True)

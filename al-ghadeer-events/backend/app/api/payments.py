@@ -1,9 +1,10 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_roles, Pagination
 from app.models.payment import Payment
 from app.models.event import Event
 from app.models.user import User
@@ -26,8 +27,20 @@ def create_payment(payload: PaymentCreate, db: Session = Depends(get_db), curren
 
 
 @router.get("/", response_model=List[PaymentOut])
-def list_payments(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(Payment).order_by(Payment.created_at.desc()).all()
+def list_payments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    pagination: Pagination = Depends(),
+    event_id: Optional[int] = Query(None),
+    status_filter: Optional[str] = Query(None, alias="status"),
+):
+    query = db.query(Payment)
+    if event_id is not None:
+        query = query.filter(Payment.event_id == event_id)
+    if status_filter:
+        query = query.filter(Payment.status == status_filter)
+
+    return query.order_by(Payment.created_at.desc()).offset(pagination.offset).limit(pagination.limit).all()
 
 
 @router.get("/{payment_id}", response_model=PaymentOut)
@@ -60,7 +73,7 @@ def update_payment(payment_id: int, payload: PaymentUpdate, db: Session = Depend
     return payment
 
 
-@router.delete("/{payment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{payment_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_roles(["admin"]))])
 def delete_payment(payment_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     payment = db.query(Payment).filter(Payment.id == payment_id).first()
     if not payment:
