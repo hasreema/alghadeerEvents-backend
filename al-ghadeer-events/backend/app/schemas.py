@@ -33,6 +33,38 @@ class TokenOut(BaseModel):
 
 
 # ----------------------
+# Employee Schemas (restored)
+# ----------------------
+class EmployeeBase(BaseModel):
+    full_name: str
+    role: Optional[str] = None
+    hourly_wage: Optional[float] = None
+    phone: Optional[str] = None
+    is_active: Optional[bool] = True
+
+
+class EmployeeCreate(EmployeeBase):
+    pass
+
+
+class EmployeeUpdate(BaseModel):
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+    hourly_wage: Optional[float] = None
+    phone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class EmployeeOut(EmployeeBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+# ----------------------
 # Enhanced Event Schemas
 # ----------------------
 EventType = Literal['Wedding', 'Henna', 'Engagement', 'Graduation', 'Other']
