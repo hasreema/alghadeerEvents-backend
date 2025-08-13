@@ -311,3 +311,77 @@ class EventAssignmentCreate(BaseModel):
     role: Optional[str] = None
     hours: float
     hourly_rate: float
+
+
+class PaginatedResponse(BaseModel):
+    items: list
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class ContactItem(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    is_primary: Optional[bool] = None
+
+
+class EventContractCreate(BaseModel):
+    event_name: str
+    event_type: str
+    event_type_other: Optional[str] = None
+    location: str
+    event_date: datetime
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    expected_guests: Optional[int] = None
+    guest_gender: Optional[str] = None
+    contacts: Optional[List[ContactItem]] = None
+    services: Optional[dict] = None
+    special_requests: Optional[str] = None
+    decoration_type: Optional[str] = None
+    menu_selections: Optional[dict] = None
+    dietary_restrictions: Optional[List[str]] = None
+    pricing: Optional[dict] = None
+    deposit_amount: Optional[float] = None
+    internal_notes: Optional[str] = None
+
+
+class EventContractUpdate(EventContractCreate):
+    pass
+
+
+class EventResponse(BaseModel):
+    id: int
+    event_name: str
+    event_type: str
+    event_type_other: Optional[str]
+    location: str
+    status: Optional[str]
+    event_date: datetime
+    start_time: Optional[str]
+    end_time: Optional[str]
+    expected_guests: Optional[int]
+    actual_guests: Optional[int]
+    guest_gender: Optional[str]
+    contacts: Optional[List[ContactItem]]
+    services: Optional[dict]
+    special_requests: Optional[str]
+    pricing: Optional[dict]
+    payment_status: Optional[str]
+    deposit_amount: Optional[float]
+    deposit_paid: Optional[bool]
+    outstanding_balance: Optional[float]
+    assigned_employees: Optional[List[str]]
+    labor_cost: Optional[float]
+    total_revenue: Optional[float]
+    total_expenses: Optional[float]
+    profit: Optional[float]
+    profit_margin: Optional[float]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True

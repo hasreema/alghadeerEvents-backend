@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, Date, Time, DateTime, ForeignKey, Index, Numeric
+from sqlalchemy import Column, Integer, String, Text, Date, Time, DateTime, ForeignKey, Index, Numeric, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -26,9 +26,23 @@ class Event(Base):
     gender = Column(String(20), nullable=True)
     guest_count = Column(Integer, nullable=True)
     special_requests = Column(JSONB, nullable=True)  # array of objects
+    special_requests_text = Column(Text, nullable=True)
     deposit_total = Column(Numeric(12, 2), nullable=True)
     deposit_paid = Column(Numeric(12, 2), nullable=True)
+    deposit_paid_flag = Column(Boolean, nullable=True)
     phones = Column(JSONB, nullable=True)  # array of strings
+
+    # Additional fields for API contract
+    end_time = Column(Time, nullable=True)
+    contacts_json = Column(JSONB, nullable=True)
+    services_flags = Column(JSONB, nullable=True)
+    pricing = Column(JSONB, nullable=True)
+    menu_selections = Column(JSONB, nullable=True)
+    dietary_restrictions = Column(JSONB, nullable=True)
+    decoration_type = Column(String(50), nullable=True)
+    internal_notes = Column(Text, nullable=True)
+    cancel_reason = Column(Text, nullable=True)
+    actual_guests = Column(Integer, nullable=True)
 
     # Legacy / existing fields
     title = Column(String(255), nullable=False, index=True)
