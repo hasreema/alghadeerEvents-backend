@@ -74,7 +74,9 @@ class EventBase(BaseModel):
     date: date
     time: Optional[time] = None
     organizer: Optional[str] = None
-    status: Optional[str] = "scheduled"
+    status: Optional[str] = "draft"
+    event_type: Optional[str] = None
+    quoted_total: Optional[float] = 0
 
 
 class EventCreate(EventBase):
@@ -89,10 +91,17 @@ class EventUpdate(BaseModel):
     time: Optional[time] = None
     organizer: Optional[str] = None
     status: Optional[str] = None
+    event_type: Optional[str] = None
+    quoted_total: Optional[float] = None
 
 
 class EventOut(EventBase):
     id: int
+    payments_total: float
+    expenses_total: float
+    labor_total: float
+    outstanding_amount: float
+    payment_status: str
     created_at: datetime
     updated_at: datetime
     created_by: Optional[int] = None
@@ -210,3 +219,26 @@ class ExpenseOut(ExpenseBase):
 
     class Config:
         orm_mode = True
+
+
+# ----------------------
+# Event Extras Schemas
+# ----------------------
+class EventServiceCreate(BaseModel):
+    name: str
+    quantity: int
+    unit_price: float
+
+
+class EventContactCreate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    note: Optional[str] = None
+
+
+class EventAssignmentCreate(BaseModel):
+    employee_id: Optional[int] = None
+    role: Optional[str] = None
+    hours: float
+    hourly_rate: float

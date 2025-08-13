@@ -9,6 +9,7 @@ from app.models.expense import Expense
 from app.models.event import Event
 from app.models.user import User
 from app.schemas import ExpenseCreate, ExpenseUpdate, ExpenseOut
+from app.services.finance import recalc_event_financials
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
 
@@ -24,6 +25,10 @@ def create_expense(payload: ExpenseCreate, db: Session = Depends(get_db), curren
     db.add(expense)
     db.commit()
     db.refresh(expense)
+
+    if expense.event_id:
+        recalc_event_financials(db, expense.event_id)
+
     return expense
 
 
@@ -69,6 +74,7 @@ def update_expense(expense_id: int, payload: ExpenseUpdate, db: Session = Depend
     if not expense:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
 
+    old_event_id = expense.event_id
     update_data = payload.dict(exclude_unset=True)
     if "event_id" in update_data and update_data["event_id"] is not None:
         event = db.query(Event).filter(Event.id == update_data["event_id"]).first()
@@ -82,6 +88,12 @@ def update_expense(expense_id: int, payload: ExpenseUpdate, db: Session = Depend
     db.add(expense)
     db.commit()
     db.refresh(expense)
+
+    if old_event_id:
+        recalc_event_financials(db, old_event_id)
+    if expense.event_id:
+        recalc_event_financials(db, expense.event_id)
+
     return expense
 
 
@@ -90,6 +102,10 @@ def delete_expense(expense_id: int, db: Session = Depends(get_db), current_user:
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not expense:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
+    event_id = expense.event_id
     db.delete(expense)
     db.commit()
+
+    if event_id:
+        recalc_event_financials(db, event_id)
     return None

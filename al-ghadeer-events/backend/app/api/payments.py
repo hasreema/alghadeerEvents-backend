@@ -9,6 +9,7 @@ from app.models.payment import Payment
 from app.models.event import Event
 from app.models.user import User
 from app.schemas import PaymentCreate, PaymentUpdate, PaymentOut
+from app.services.finance import recalc_event_financials
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
@@ -23,6 +24,8 @@ def create_payment(payload: PaymentCreate, db: Session = Depends(get_db), curren
     db.add(payment)
     db.commit()
     db.refresh(payment)
+
+    recalc_event_financials(db, payment.event_id)
     return payment
 
 
@@ -63,6 +66,7 @@ def update_payment(payment_id: int, payload: PaymentUpdate, db: Session = Depend
         if not event:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
+    old_event_id = payment.event_id
     for k, v in update_data.items():
         setattr(payment, k, v)
     payment.updated_by = current_user.id
@@ -70,6 +74,11 @@ def update_payment(payment_id: int, payload: PaymentUpdate, db: Session = Depend
     db.add(payment)
     db.commit()
     db.refresh(payment)
+
+    recalc_event_financials(db, payment.event_id)
+    if old_event_id != payment.event_id:
+        recalc_event_financials(db, old_event_id)
+
     return payment
 
 
@@ -78,6 +87,9 @@ def delete_payment(payment_id: int, db: Session = Depends(get_db), current_user:
     payment = db.query(Payment).filter(Payment.id == payment_id).first()
     if not payment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
+    event_id = payment.event_id
     db.delete(payment)
     db.commit()
+
+    recalc_event_financials(db, event_id)
     return None
