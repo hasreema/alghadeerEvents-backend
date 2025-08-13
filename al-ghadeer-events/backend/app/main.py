@@ -7,11 +7,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.core.security import hash_password
 from app.api.events import router as events_router
 from app.api.tasks import router as tasks_router
+from app.api.auth import router as auth_router
+from app.api.payments import router as payments_router
+from app.models.user import User
 
 # Configure logging
 logging.basicConfig(
@@ -25,6 +30,26 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up Al Ghadeer Events Management System (FastAPI + PostgreSQL)...")
+
+    # Seed admin user if not exists
+    try:
+        with SessionLocal() as db:  # type: Session
+            admin = db.query(User).filter(User.email == settings.admin_email).first()
+            if not admin:
+                admin = User(
+                    email=settings.admin_email,
+                    username="admin",
+                    full_name="System Administrator",
+                    hashed_password=hash_password(settings.admin_password),
+                    role="admin",
+                    is_active=True,
+                )
+                db.add(admin)
+                db.commit()
+                logger.info("Admin user created")
+    except Exception as e:
+        logger.warning(f"Admin seed skipped: {e}")
+
     yield
     logger.info("Shutting down...")
 
@@ -76,8 +101,10 @@ async def health_check():
 
 
 # Routers
+app.include_router(auth_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
+app.include_router(payments_router, prefix="/api")
 
 
 # Exception handlers

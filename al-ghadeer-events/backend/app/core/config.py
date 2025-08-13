@@ -11,12 +11,21 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    # Database
-    database_url: str = "postgresql+psycopg2://postgres:postgres@db:5432/alghadeer"
+    # Database (psycopg v3)
+    database_url: str = "postgresql+psycopg://postgres:postgres@db:5432/alghadeer"
 
     # Frontend/CORS
     frontend_url: str = "http://localhost:5173"
     cors_origins: List[str] = []
+
+    # Auth / JWT
+    secret_key: str = "change-me-in-env"
+    algorithm: str = "HS256"
+    access_token_expires_minutes: int = 60 * 24  # 1 day
+
+    # Optional admin seed
+    admin_email: str = "admin@example.com"
+    admin_password: str = "admin12345"
 
     class Config:
         env_file = ".env"
@@ -24,7 +33,6 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Allow comma-separated list from env
         origins_env = os.getenv("CORS_ORIGINS")
         if not self.cors_origins:
             if origins_env:

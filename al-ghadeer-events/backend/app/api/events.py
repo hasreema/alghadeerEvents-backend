@@ -3,15 +3,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
 from app.models.event import Event
+from app.models.user import User
 from app.schemas import EventCreate, EventUpdate, EventOut
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
 
 @router.post("/", response_model=EventOut, status_code=status.HTTP_201_CREATED)
-def create_event(payload: EventCreate, db: Session = Depends(get_db)):
-    event = Event(**payload.dict())
+def create_event(payload: EventCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    event = Event(**payload.dict(), created_by=current_user.id, updated_by=current_user.id)
     db.add(event)
     db.commit()
     db.refresh(event)
@@ -19,12 +21,12 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[EventOut])
-def list_events(db: Session = Depends(get_db)):
+def list_events(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(Event).order_by(Event.date.desc()).all()
 
 
 @router.get("/{event_id}", response_model=EventOut)
-def get_event(event_id: int, db: Session = Depends(get_db)):
+def get_event(event_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
@@ -32,7 +34,7 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{event_id}", response_model=EventOut)
-def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_db)):
+def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
@@ -40,6 +42,7 @@ def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_
     update_data = payload.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(event, key, value)
+    event.updated_by = current_user.id
 
     db.add(event)
     db.commit()
@@ -48,7 +51,7 @@ def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_event(event_id: int, db: Session = Depends(get_db)):
+def delete_event(event_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")

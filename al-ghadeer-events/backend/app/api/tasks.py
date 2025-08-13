@@ -3,21 +3,23 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
 from app.models.task import Task
 from app.models.event import Event
+from app.models.user import User
 from app.schemas import TaskCreate, TaskUpdate, TaskOut
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
 @router.post("/", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
-def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
+def create_task(payload: TaskCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if payload.event_id is not None:
         event = db.query(Event).filter(Event.id == payload.event_id).first()
         if not event:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
-    task = Task(**payload.dict())
+    task = Task(**payload.dict(), created_by=current_user.id, updated_by=current_user.id)
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -27,6 +29,7 @@ def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[TaskOut])
 def list_tasks(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     event_id: Optional[int] = Query(None, description="Filter by event_id"),
 ):
     query = db.query(Task)
@@ -36,7 +39,7 @@ def list_tasks(
 
 
 @router.get("/{task_id}", response_model=TaskOut)
-def get_task(task_id: int, db: Session = Depends(get_db)):
+def get_task(task_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
@@ -44,14 +47,13 @@ def get_task(task_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{task_id}", response_model=TaskOut)
-def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)):
+def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     update_data = payload.dict(exclude_unset=True)
 
-    # Validate event if event_id provided
     if "event_id" in update_data and update_data["event_id"] is not None:
         event = db.query(Event).filter(Event.id == update_data["event_id"]).first()
         if not event:
@@ -59,6 +61,7 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
 
     for key, value in update_data.items():
         setattr(task, key, value)
+    task.updated_by = current_user.id
 
     db.add(task)
     db.commit()
@@ -67,7 +70,7 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_task(task_id: int, db: Session = Depends(get_db)):
+def delete_task(task_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
