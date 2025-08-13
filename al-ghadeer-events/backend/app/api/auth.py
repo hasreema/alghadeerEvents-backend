@@ -15,6 +15,11 @@ from app.schemas import UserCreate, UserOut, TokenOut
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
+@router.get("/ping")
+def ping():
+    return {"ok": True}
+
+
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
     # ensure email uniqueness
