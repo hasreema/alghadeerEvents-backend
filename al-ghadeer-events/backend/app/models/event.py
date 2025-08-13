@@ -1,6 +1,7 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, Date, Time, DateTime, ForeignKey, Index, Numeric
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.database import Base
 
@@ -15,6 +16,21 @@ class Event(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
+
+    # New enhanced fields
+    name = Column(String(255), nullable=True, index=True)
+    type = Column(String(50), nullable=True, index=True)
+    type_custom = Column(String(100), nullable=True)
+    starts_at = Column(DateTime, nullable=True, index=True)
+    locations = Column(JSONB, nullable=True)  # array of strings
+    gender = Column(String(20), nullable=True)
+    guest_count = Column(Integer, nullable=True)
+    special_requests = Column(JSONB, nullable=True)  # array of objects
+    deposit_total = Column(Numeric(12, 2), nullable=True)
+    deposit_paid = Column(Numeric(12, 2), nullable=True)
+    phones = Column(JSONB, nullable=True)  # array of strings
+
+    # Legacy / existing fields
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     location = Column(String(100), nullable=True, index=True)
@@ -31,7 +47,7 @@ class Event(Base):
     expenses_total = Column(Numeric(12, 2), nullable=False, default=0)
     labor_total = Column(Numeric(12, 2), nullable=False, default=0)
     outstanding_amount = Column(Numeric(12, 2), nullable=False, default=0)
-    payment_status = Column(String(20), nullable=False, default="unpaid")  # unpaid|partial|paid
+    payment_status = Column(String(20), nullable=False, default="unpaid")
 
     created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

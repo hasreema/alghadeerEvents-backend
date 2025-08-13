@@ -2,21 +2,48 @@ from typing import List, Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import String
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_roles, Pagination
 from app.models.event import Event
 from app.models.user import User
 from app.models.event_extras import EventService, EventContact, EventAssignment
-from app.schemas import EventCreate, EventUpdate, EventOut, EventServiceCreate, EventContactCreate, EventAssignmentCreate
+from app.schemas import (
+    EventCreate, EventUpdate, EventOut,
+    EventEnhancedCreate, EventEnhancedUpdate, EventEnhancedOut,
+    EventServiceCreate, EventContactCreate, EventAssignmentCreate,
+)
 from app.services.finance import recalc_event_financials
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
 
-@router.post("/", response_model=EventOut, status_code=status.HTTP_201_CREATED)
-def create_event(payload: EventCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    event = Event(**payload.dict(), created_by=current_user.id, updated_by=current_user.id)
+# Enhanced create
+@router.post("/", response_model=EventEnhancedOut, status_code=status.HTTP_201_CREATED)
+def create_event(payload: EventEnhancedCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    event = Event(
+        name=payload.name,
+        type=payload.type,
+        type_custom=payload.type_custom,
+        starts_at=payload.date,
+        locations=payload.locations,
+        gender=payload.gender,
+        guest_count=payload.guest_count,
+        description=payload.description,
+        special_requests=[sr.dict() for sr in (payload.special_requests or [])],
+        deposit_total=payload.deposit_total,
+        deposit_paid=payload.deposit_paid,
+        phones=payload.phones,
+        # legacy fields for compatibility
+        title=payload.name,
+        date=payload.date.date(),
+        time=payload.date.time(),
+        event_type=payload.type,
+        status="scheduled",
+        created_by=current_user.id,
+        updated_by=current_user.id,
+    )
     db.add(event)
     db.commit()
     db.refresh(event)
@@ -24,34 +51,8 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db), current_us
     return event
 
 
-@router.get("/", response_model=List[EventOut])
-def list_events(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    pagination: Pagination = Depends(),
-    status_filter: Optional[str] = Query(None, alias="status"),
-    location: Optional[str] = Query(None),
-    start_date: Optional[date] = Query(None),
-    end_date: Optional[date] = Query(None),
-    search: Optional[str] = Query(None, description="Search in title"),
-):
-    query = db.query(Event)
-    if status_filter:
-        query = query.filter(Event.status == status_filter)
-    if location:
-        query = query.filter(Event.location == location)
-    if start_date:
-        query = query.filter(Event.date >= start_date)
-    if end_date:
-        query = query.filter(Event.date <= end_date)
-    if search:
-        like = f"%{search}%"
-        query = query.filter(Event.title.ilike(like))
-
-    return query.order_by(Event.date.desc()).offset(pagination.offset).limit(pagination.limit).all()
-
-
-@router.get("/{event_id}", response_model=EventOut)
+# Enhanced get
+@router.get("/{event_id}", response_model=EventEnhancedOut)
 def get_event(event_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
@@ -59,15 +60,48 @@ def get_event(event_id: int, db: Session = Depends(get_db), current_user: User =
     return event
 
 
-@router.put("/{event_id}", response_model=EventOut)
-def update_event(event_id: int, payload: EventUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+# Enhanced update
+@router.put("/{event_id}", response_model=EventEnhancedOut)
+def update_event(event_id: int, payload: EventEnhancedUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
     update_data = payload.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(event, key, value)
+
+    # Map enhanced fields
+    mapping = {
+        "name": "name",
+        "type": "type",
+        "type_custom": "type_custom",
+        "date": "starts_at",
+        "locations": "locations",
+        "gender": "gender",
+        "guest_count": "guest_count",
+        "description": "description",
+        "special_requests": "special_requests",
+        "deposit_total": "deposit_total",
+        "deposit_paid": "deposit_paid",
+        "phones": "phones",
+    }
+
+    for k, v in update_data.items():
+        target = mapping.get(k)
+        if target == "starts_at":
+            setattr(event, "starts_at", v)
+            setattr(event, "date", v.date())
+            setattr(event, "time", v.time())
+        elif target == "special_requests" and v is not None:
+            setattr(event, target, [sr.dict() for sr in v])
+        else:
+            setattr(event, target, v)
+
+    # keep legacy fields in sync
+    if "name" in update_data:
+        event.title = update_data["name"]
+    if "type" in update_data:
+        event.event_type = update_data["type"]
+
     event.updated_by = current_user.id
 
     db.add(event)
@@ -82,10 +116,38 @@ def delete_event(event_id: int, db: Session = Depends(get_db), current_user: Use
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
-
     db.delete(event)
     db.commit()
     return None
+
+
+# List with filters
+@router.get("/", response_model=List[EventEnhancedOut])
+def list_events(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    pagination: Pagination = Depends(),
+    type: Optional[str] = Query(None),
+    location: Optional[str] = Query(None),
+    start: Optional[date] = Query(None),
+    end: Optional[date] = Query(None),
+    search: Optional[str] = Query(None),
+):
+    query = db.query(Event)
+    if type:
+        query = query.filter(Event.type == type)
+    if location:
+        # locations is JSONB array; simple LIKE match fallback
+        query = query.filter(Event.locations.cast(String).ilike(f"%{location}%"))
+    if start:
+        query = query.filter(Event.date >= start)
+    if end:
+        query = query.filter(Event.date <= end)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(Event.name.ilike(like))
+
+    return query.order_by(Event.date.desc()).offset(pagination.offset).limit(pagination.limit).all()
 
 
 # Services management

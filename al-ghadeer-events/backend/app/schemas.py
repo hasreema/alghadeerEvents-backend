@@ -1,6 +1,6 @@
 from datetime import date, time, datetime
-from typing import Optional
-from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, List, Literal
+from pydantic import BaseModel, EmailStr, Field, validator
 
 
 # ----------------------
@@ -33,29 +33,66 @@ class TokenOut(BaseModel):
 
 
 # ----------------------
-# Employee Schemas
+# Enhanced Event Schemas
 # ----------------------
-class EmployeeBase(BaseModel):
-    full_name: str
-    role: Optional[str] = None
-    hourly_wage: Optional[float] = None
-    phone: Optional[str] = None
-    is_active: Optional[bool] = True
+EventType = Literal['Wedding', 'Henna', 'Engagement', 'Graduation', 'Other']
+GenderType = Literal['Men', 'Women', 'Mixed']
+ProvidedBy = Literal['Hall', 'Client']
+LocationPreset = Literal['Hall Floor 0', 'Hall Floor 1', 'Garden', 'Waterfall']
 
 
-class EmployeeCreate(EmployeeBase):
+class SpecialRequest(BaseModel):
+    name: str
+    quantity: Optional[int] = None
+    cost: float
+    provided_by: ProvidedBy
+
+
+class EventEnhancedCreate(BaseModel):
+    name: str
+    type: EventType
+    type_custom: Optional[str] = None
+    date: datetime
+    locations: List[str]
+    gender: GenderType
+    guest_count: int
+    description: Optional[str] = None
+    special_requests: Optional[List[SpecialRequest]] = None
+    deposit_total: float
+    deposit_paid: float
+    phones: List[str]
+
+    @validator('type_custom')
+    def validate_type_custom(cls, v, values):
+        if values.get('type') == 'Other' and not v:
+            raise ValueError("type_custom is required when type is 'Other'")
+        return v
+
+    @validator('locations')
+    def validate_locations(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError('locations must have at least one value')
+        return v
+
+    @validator('special_requests', each_item=True)
+    def validate_special_requests(cls, v: SpecialRequest):
+        if v.name.lower() == 'cake' and (v.quantity is None or v.quantity <= 0):
+            raise ValueError('Cake requires quantity > 0')
+        return v
+
+    @validator('deposit_paid')
+    def validate_deposit_paid(cls, v, values):
+        total = values.get('deposit_total', 0)
+        if v > total:
+            raise ValueError('deposit_paid must be less than or equal to deposit_total')
+        return v
+
+
+class EventEnhancedUpdate(EventEnhancedCreate):
     pass
 
 
-class EmployeeUpdate(BaseModel):
-    full_name: Optional[str] = None
-    role: Optional[str] = None
-    hourly_wage: Optional[float] = None
-    phone: Optional[str] = None
-    is_active: Optional[bool] = None
-
-
-class EmployeeOut(EmployeeBase):
+class EventEnhancedOut(EventEnhancedCreate):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -65,7 +102,7 @@ class EmployeeOut(EmployeeBase):
 
 
 # ----------------------
-# Event Schemas
+# Existing Event Schemas (kept)
 # ----------------------
 class EventBase(BaseModel):
     title: str
