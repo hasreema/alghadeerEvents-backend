@@ -1,5 +1,5 @@
 from pydantic import BaseSettings
-from typing import List
+from typing import List, Optional
 import os
 
 
@@ -21,11 +21,46 @@ class Settings(BaseSettings):
     # Auth / JWT
     secret_key: str = "change-me-in-env"
     algorithm: str = "HS256"
-    access_token_expires_minutes: int = 60 * 24  # 1 day
+    access_token_expires_minutes: int = 60 * 24
 
     # Optional admin seed
     admin_email: str = "admin@example.com"
     admin_password: str = "admin12345"
+
+    # SMTP Email
+    smtp_host: Optional[str] = None
+    smtp_port: int = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_from: Optional[str] = None
+    smtp_use_tls: bool = True
+
+    # WhatsApp (Twilio)
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_from_whatsapp: Optional[str] = None
+
+    # Push (FCM)
+    fcm_server_key: Optional[str] = None
+
+    # Google Sheets
+    google_service_account_json: Optional[str] = None
+    google_sheets_id: Optional[str] = None
+
+    # Zapier
+    zapier_hook_url: Optional[str] = None
+
+    # Storage
+    storage_backend: str = "local"  # local | s3
+    storage_base_url: str = "http://localhost:8000/files"  # for local downloads, adjust behind proxy
+    local_storage_path: str = "storage"
+    s3_bucket: Optional[str] = None
+    s3_region: Optional[str] = None
+    aws_access_key_id: Optional[str] = None
+    aws_secret_access_key: Optional[str] = None
+
+    # Reporting
+    hebrew_font_path: Optional[str] = None
 
     class Config:
         env_file = ".env"
