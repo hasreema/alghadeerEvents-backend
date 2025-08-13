@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.event import Event
 
-router = APIRouter(prefix="/analytics", tags=["Analytics"])()
+router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 
 @router.get("/overview")

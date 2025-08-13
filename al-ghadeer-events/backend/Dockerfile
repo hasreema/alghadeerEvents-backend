@@ -5,19 +5,23 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install system deps
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
+# Install system dependencies + dos2unix
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev dos2unix && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install Python deps
+# Copy and install Python dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app
+# Copy app & alembic
 COPY app ./app
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY start.sh ./
 
+# Force start.sh to Unix format + make executable
+RUN dos2unix /app/start.sh
 RUN chmod +x /app/start.sh
 
 EXPOSE 8000
